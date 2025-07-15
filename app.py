@@ -12,7 +12,7 @@ app = Flask(__name__)
 #                                      database+driver://username:password@server:port/databasename
 
 DATABASE_URI = os.getenv("DATABASE_URI")
-app.config['SQLALCHEMY_DATABASE_URI'] = DATABASE_URI
+app.config['SQLALCHEMY_DATABASE_URI']= DATABASE_URI
 
 db = SQLAlchemy(app)
 ma = Marshmallow(app)
@@ -89,7 +89,8 @@ def seed_tables():
 @app.route("/products")
 def get_products():
     # Statement: SELECT * FROM products;
-    products_list = Product.query.all()
+    stmt = db.select(Product)
+    products_list = db.session.scalars(stmt)
 
     # Convert the object to JSON format - Serialise
     data = products_schema.dump(products_list)
@@ -100,7 +101,9 @@ def get_products():
 @app.route("/products/<int:product_id>")
 def get_a_product(product_id):
     # Statement: SELECT * FROM products WHERE id=product_id;
-    product = Product.query.get(product_id)
+    # product = Product.query.get(product_id)
+    stmt = db.select(Product).where(Product.id == product_id)
+    product = db.session.scalar(stmt)
 
     if product:
         data = product_schema.dump(product)
@@ -138,10 +141,11 @@ def delete_product(product_id):
     # Find the product with the product_id from the database
     # Statement: SELECT * FROM products WHERE id = product_id;
     # Method 1:
-    # stmt = db.select(Product).filter_by(id=product_id)
-    # product = db.session.scalar(stmt)
+    # stmt = db.select(Product).where(Product.id == product_id)
+    stmt = db.select(Product).filter_by(id=product_id)
+    product = db.session.scalar(stmt)
     # Method 2:
-    product = Product.query.get(product_id)
+    # product = Product.query.get(product_id)
     # if it exists
     if product:
         # delete the product
@@ -160,7 +164,9 @@ def delete_product(product_id):
 def update_product(product_id):
     # Statement: UPDATE products SET column_name=value;
     # Find the product with the id = product_id
-    product = Product.query.get(product_id)
+    # product = Product.query.get(product_id)
+    stmt = db.select(Product).filter_by(id=product_id)
+    product = db.session.scalar(stmt)
     # if product exists
     if product:
         # Fetch the updated values from the request body
@@ -182,7 +188,7 @@ def update_product(product_id):
     # else
     else:
         # acknowledgement message
-        return {"message": f"Product with id {product_id} does not exist."}, 404
+        return {"message": f"Product with id '{product_id}' does not exist."}, 404
 
 if __name__ == "__main__":
     app.run(debug=True)
